@@ -32,7 +32,7 @@ def err(num):
 
 
 
-
+#laser --------------------
 
 def laseron():
 	laser=c_char_p ("SY3PL50M:32".encode('utf-8'))
@@ -65,10 +65,51 @@ def setamp(percent):
 	err(mydll.rcSetRegFromStringA(laser, Amplification, amppercent, 0))
 	# 0 means to complain if parameter ranges are incorrect
 	return
+
+#photomultipliers --------------------
 	
+def setpmtvoltage(volts):
+	if volts<0:
+		volts=0
+	if volts>1050:
+		volts=1050
+	cvolts=c_double(volts)
+	PMT1=c_char_p ("PMTC0000:1".encode('utf-8'))
+	command=c_char_p ("Set PMT cathode voltage".encode('utf-8'))
+	err(mydll.rcSetRegFromDouble(PMT1, command, cvolts))
+	return
+
+
+def pmton():
+	on=c_double(1)
+	PMT1=c_char_p ("PMTC0000:1".encode('utf-8'))
+	command=c_char_p ("PMT HV power supply".encode('utf-8'))
+	err(mydll.rcSetRegFromDouble(PMT1, command, on))
+	return
+	
+def pmtoff():
+	off=c_double(0)
+	PMT1=c_char_p ("PMTC0000:1".encode('utf-8'))
+	command=c_char_p ("PMT HV power supply".encode('utf-8'))
+	err(mydll.rcSetRegFromDouble(PMT1, command, off))
+	return
+	
+def phdvisdata(): # seems to work, but not the timestamp
+	phdvis=c_char_p ("PHD1K000:3".encode('utf-8'))
+	datareg=c_char_p ("Data".encode('utf-8'))
+	data=c_char_p("cool".encode('utf-8'))
+	maxvallen=c_int(10) # max string length
+	timeout=c_int(200) # milliseconds
+	timestamp=c_int() # writing timestamp here
+	print (data.value)
+	print(timestamp.value)
+	err(mydll.rcGetRegAsString(phdvis,datareg, data, maxvallen, timeout,timestamp))
+	print(data.value)
+	print(timestamp.value)
+	return
+
 
 if __name__ == '__main__':
-	
 	mydll = WinDLL("REMOTECONTROL.dll")
 	#connect
 	print("Connecting!")
@@ -81,14 +122,19 @@ if __name__ == '__main__':
 	
 	# set amplification percentage
 	
-	setamp(23)
+	setamp(70)
 	
 	time.sleep(10) #pause for x seconds
 	
 	
+	setpmtvoltage(567)
+	pmtoff()
+	phdvisdata()
+	
+	
 	# switch laser OFF
 	
-	laseroff()
+	#laseroff()
 	
 	print("Disconnecting!")
 	
