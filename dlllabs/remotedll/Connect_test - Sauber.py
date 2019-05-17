@@ -2,7 +2,7 @@
 from ctypes import*
 import time
 
-
+import numpy as np
 
 
 def err(num):
@@ -26,8 +26,8 @@ def err(num):
 	 "RMTCTRLERR_LOGISEMPTY       16  // no data in the queue yet",
 	 "RMTCTRLERR_ALREADYCONNECTED 17  // already connected, please disconnect first",
 	 "RMTCTRLERR_NOTYETCONNECTED  18  // not connected, please connect first"]
-	
-	print(errs[num],"\n")
+	if num!=0:
+		print(errs[num],"\n")
 
 
 
@@ -93,20 +93,58 @@ def pmtoff():
 	command=c_char_p ("PMT HV power supply".encode('utf-8'))
 	err(mydll.rcSetRegFromDouble(PMT1, command, off))
 	return
+
+
+# data aquisition from phdvis --------------------
 	
 def phdvisdata(): # seems to work, but not the timestamp
+	
 	phdvis=c_char_p ("PHD1K000:3".encode('utf-8'))
 	datareg=c_char_p ("Data".encode('utf-8'))
-	data=c_char_p("cool".encode('utf-8'))
+	data=c_char_p("coolllllllllllllllllllllllllllll".encode('utf-8'))
 	maxvallen=c_int(10) # max string length
 	timeout=c_int(200) # milliseconds
-	timestamp=c_int() # writing timestamp here
-	print (data.value)
-	print(timestamp.value)
-	err(mydll.rcGetRegAsString(phdvis,datareg, data, maxvallen, timeout,timestamp))
-	print(data.value)
-	print(timestamp.value)
-	return
+	timestamp=c_int(-5) # writing timestamp here
+
+	err(mydll.rcGetRegAsString(phdvis,datareg, data, maxvallen, timeout,byref(timestamp)))
+	#print("phdvis", end = ' ')
+	#print("I:",data.value.decode("ascii"), end = ' ')
+	#print("Ts",timestamp.value, end = ' ')
+	return data.value.decode("ascii"),timestamp.value
+	
+# data aquisition from phdvis --------------------
+
+def phdirdata(): # seems to work, but not the timestamp
+	
+	phdvis=c_char_p ("PHD1K000:5".encode('utf-8'))
+	datareg=c_char_p ("Data".encode('utf-8'))
+	data=c_char_p("coolllllllllllllllllllllllllllll".encode('utf-8'))
+	maxvallen=c_int(10) # max string length
+	timeout=c_int(200) # milliseconds
+	timestamp=c_int(-5) # writing timestamp here
+
+	err(mydll.rcGetRegAsString(phdvis,datareg, data, maxvallen, timeout,byref(timestamp)))
+	#print("phdIR", end = ' ')
+	#print("I:",data.value.decode("ascii"), end = ' ')
+	#print("Ts",timestamp.value, end = '')
+	return data.value.decode("ascii"),timestamp.value
+
+# data aquisition from lower PMT --------------------
+
+def pmtdata(): # seems to work, but not the timestamp
+	
+	phdvis=c_char_p ("PMTC0000:1".encode('utf-8'))
+	datareg=c_char_p ("Data".encode('utf-8'))
+	data=c_char_p("coolllllllllllllllllllllllllllll".encode('utf-8'))
+	maxvallen=c_int(10) # max string length
+	timeout=c_int(200) # milliseconds
+	timestamp=c_int(-5) # writing timestamp here
+
+	err(mydll.rcGetRegAsString(phdvis,datareg, data, maxvallen, timeout,byref(timestamp)))
+	#print("PMT", end = ' ')
+	#print("I:",data.value.decode("ascii"), end = ' ')
+	#print("Ts",timestamp.value, end = ' ')
+	return data.value.decode("ascii"),timestamp.value 
 
 
 if __name__ == '__main__':
@@ -118,24 +156,53 @@ if __name__ == '__main__':
 	
 	
 	laseron() #self explainatory
-	
+	setpmtvoltage(567)
+	pmton()
 	
 	# set amplification percentage
 	
 	setamp(70)
 	
-	time.sleep(10) #pause for x seconds
+
+	print("1s")
+	s=60
 	
+	pmtdataset=np.zeros(0)
+	phdvisdataset=np.zeros(0)
+	phdirdataset=np.zeros(0)
 	
-	setpmtvoltage(567)
-	pmtoff()
-	phdvisdata()
+	for i in range(0, 20*s):
+		#time.sleep(10./1000) #pause for x ms
+		# full speed is 3x realtime, not limited by printing
 	
-	
+		ints,ts=pmtdata()
+		print("PMT", end = ' ')
+		print("I:",ints, end = ' ')
+		print("Ts",ts, end = ' ')
+		pmtdataset=np.append(pmtdataset,int(ints))
+		
+		ints,ts=phdvisdata() 
+		print("phdvis", end = ' ')
+		print("I:",ints, end = ' ')
+		print("Ts",ts, end = ' ')
+		phdvisdataset=np.append(phdvisdataset,int(ints))
+		
+		ints,ts=phdirdata()
+		print("phdIR", end = ' ')
+		print("I:",ints, end = ' ')
+		print("Ts",ts, end = ' ')
+		print("")
+		phdirdataset=np.append(phdirdataset,int(ints))
+
+	print("1s")
+	#time.sleep(10)
 	# switch laser OFF
 	
-	#laseroff()
-	
+	print (pmtdataset)
+	print(phdvisdataset)
+	print (phdirdataset)
+	laseroff()
+	pmtoff()
 	print("Disconnecting!")
 	
 	err(mydll.rcDisconnect())
