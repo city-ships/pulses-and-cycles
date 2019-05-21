@@ -1,0 +1,16 @@
+
+import numpy as np
+
+def trivolt(u1,u2,p,t0,tt):
+	t=tt-t0
+	tau=(t%p)/p
+	du=u2-u1
+	voltage= u2-du*np.absolute(2*(tau-0.5))
+	return round (voltage,3) # just for better loking results
+
+	
+
+		
+		
+for i in range(0,101):
+	print (trivolt(0.,1.,10.,0.,i),i)

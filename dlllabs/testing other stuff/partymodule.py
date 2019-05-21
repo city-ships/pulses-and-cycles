@@ -1,0 +1,4 @@
+
+
+def party():
+	print("Party")

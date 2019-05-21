@@ -164,48 +164,94 @@ if __name__ == '__main__':
 	setamp(70)
 	
 
-	print("1s")
+
 	s=60
 	
 	pmtdataset=np.zeros(0)
 	phdvisdataset=np.zeros(0)
 	phdirdataset=np.zeros(0)
+	pmtts=np.zeros(0)
+	phsvists=np.zeros(0)
+	phdirts=np.zeros(0)
 	
-	for i in range(0, 20*s):
-		#time.sleep(10./1000) #pause for x ms
-		# full speed is 3x realtime, not limited by printing
+	print("Cancel data acquisition with Strg-C / Ctrl-C")
 	
-		ints,ts=pmtdata()
-		print("PMT", end = ' ')
-		print("I:",ints, end = ' ')
-		print("Ts",ts, end = ' ')
-		pmtdataset=np.append(pmtdataset,int(ints))
+	try:
+		while True:
+			#time.sleep(10./1000) #pause for x ms
+			# full speed is 3x realtime, not limited by printing
 		
-		ints,ts=phdvisdata() 
-		print("phdvis", end = ' ')
-		print("I:",ints, end = ' ')
-		print("Ts",ts, end = ' ')
-		phdvisdataset=np.append(phdvisdataset,int(ints))
+			ints,ts=pmtdata()
+			#print("PMT", end = ' ')
+			#print("I:",ints, end = ' ')
+			#print("Ts",ts, end = ' ')
+			pmtdataset=np.append(pmtdataset,int(ints))
+			pmtts=np.append(pmtts,int(ts))
+			
+			ints,ts=phdvisdata() 
+			#print("phdvis", end = ' ')
+			#print("I:",ints, end = ' ')
+			#print("Ts",ts, end = ' ')
+			phdvisdataset=np.append(phdvisdataset,int(ints))
+			phsvists=np.append(phsvists,int(ts))
+			
+			ints,ts=phdirdata()
+			#print("phdIR", end = ' ')
+			#print("I:",ints, end = ' ')
+			#print("Ts",ts, end = ' ')
+			#print("")
+			phdirdataset=np.append(phdirdataset,int(ints))
+			phdirts=np.append(phdirts,int(ts))
+			
+	except (KeyboardInterrupt):
+		print ("Finished?")
+		laseroff()
+		pmtoff()
+		err(mydll.rcDisconnect())
+		print("Disconnecting!")
 		
-		ints,ts=phdirdata()
-		print("phdIR", end = ' ')
-		print("I:",ints, end = ' ')
-		print("Ts",ts, end = ' ')
-		print("")
-		phdirdataset=np.append(phdirdataset,int(ints))
+		print (pmtdataset)
+		print(phdvisdataset)
+		print (phdirdataset)
+		
+	
+	for i in range (0,pmtdataset.size): # sanity check
+		if pmtts[i]==phsvists[i]==phsirts[i]:
+			continue
+		else:
+			print ("different timestamps!",i)
+		
+	
+	doubles=[]
+			
+			
+	
+	for i in range (1,pmtdataset.size): # check for double entries from oversampling
+		if pmtts[i-1]==phsvists[i]:
+			doubles.append(i)
+		else:
+			continue
+	
+	pmtdataset=np.delete(pmtdataset,doubles) # deleting those
+	phdvisdataset=np.delete(phdvisdataset,doubles)
+	phdirdataset=np.delete(phdirdataset,doubles)
+	pmtts=np.np.delete(pmtts,doubles)
+	phsvists=np.delete(phsvists,doubles)
+	phdirts=np.delete(phdirts,doubles)
+	
+	# writing to parent directory
+	np.savetxt("../data.csv", np.transpose((pmtdataset,phdvisdataset,phdirdataset)), fmt='%.18e', delimiter='	', newline='\n', header='', footer='', comments='# ')
+	
+	# plotting/ file writing
+	
+			
+			
+	
+	input("...Press enter to EXIT...")
 
-	print("1s")
-	#time.sleep(10)
-	# switch laser OFF
-	
-	print (pmtdataset)
-	print(phdvisdataset)
-	print (phdirdataset)
-	laseroff()
-	pmtoff()
-	print("Disconnecting!")
-	
-	err(mydll.rcDisconnect())
+
+		
+
 
 
 
