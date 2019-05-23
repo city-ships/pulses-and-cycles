@@ -1,8 +1,66 @@
 
 from ctypes import*
 import time
-
 import numpy as np
+import os
+
+
+
+###### PLOTTING #############
+
+from pyqtgraph.Qt import QtGui, QtCore
+import pyqtgraph as pg
+
+
+
+
+### START QtApp #####
+app = QtGui.QApplication([])            # you MUST do this once (initialize things)
+
+
+win = pg.GraphicsWindow(title="Signal from potomultiplier and photodiode") # creates a window
+win.showMaximized()
+
+
+p = win.addPlot(title="Photomuliplier")  # creates empty space for the plot in the window
+curve = p.plot()                        # create an empty "plot" (a curve to plot)
+windowWidth = 500                       # width of the window displaying the curve
+Xm = np.linspace(0,0,windowWidth)          # create array that will contain the relevant time series
+ptr = -windowWidth
+
+## second windowm-> code here
+
+p2 = win.addPlot(title="Photodiode (VIS)")  # creates empty space for the plot in the window
+curve2 = p2.plot()                        # create an empty "plot" (a curve to plot)
+Xm2 = np.linspace(0,0,windowWidth)          # create array that will contain the relevant time series
+ptr2 = -windowWidth
+
+
+# Realtime data plot. Each time this function is called, the data display is updated
+
+def update(value):
+	size=value.size
+	global curve, ptr, Xm
+	Xm[:-size] = Xm[size:]                      # shift data in the temporal mean 1 sample left
+	Xm[-size:] = value                 # vector containing the instantaneous values
+	ptr += size                              # update x position for displaying the curve
+	curve.setData(Xm)                     # set the curve with this data
+	curve.setPos(ptr,0)                   # set x position in the graph to 0
+	#QtGui.QApplication.processEvents()    # you MUST process the plot now (1x reicht)
+
+def update2(value):
+	size=value.size
+	global curve2, ptr2, Xm2
+	Xm2[:-size] = Xm2[size:]                      # shift data in the temporal mean 1 sample left
+	Xm2[-size:] = value                 # vector containing the instantaneous values
+	ptr2 += size                              # update x position for displaying the curve
+	curve2.setData(Xm2)                     # set the curve with this data
+	curve2.setPos(ptr2,0)                   # set x position in the graph to 0
+	QtGui.QApplication.processEvents()    # you MUST process the plot now
+
+
+##########################
+
 
 
 def err(num):
@@ -29,7 +87,28 @@ def err(num):
 	if num!=0:
 		print(errs[num],"\n")
 
+# plotting in the terminal (plots are sideways)
 
+def cmdlineplot2x(value1,maxx1,value2,maxx2,columns):
+
+	columns-=1
+	columns=int(columns/2)
+		
+	x1=int(np.round(value1/maxx1*(columns),0))
+	x2=int(np.round(value2/maxx2*(columns),0))
+	#print('@' * x1,end="")
+	#print(' ' * (columns-x1),end="")
+	#print('@' * x2,end="")
+	#print(' ' * (columns-x2))
+	
+	print('@' * x1,' ' * (columns-x1),'@' * x2,' ' * (columns-x2),sep='')
+	return
+
+
+try:
+    columns, rows = os.get_terminal_size(0)
+except OSError:
+    columns, rows = os.get_terminal_size(1)
 
 
 #laser --------------------
@@ -101,7 +180,7 @@ def phdvisdata(): # seems to work, but not the timestamp
 	
 	phdvis=c_char_p ("PHD1K000:3".encode('utf-8'))
 	datareg=c_char_p ("Data".encode('utf-8'))
-	data=c_char_p("coolllllllllllllllllllllllllllll".encode('utf-8'))
+	data=c_char_p("-1".encode('utf-8'))
 	maxvallen=c_int(10) # max string length
 	timeout=c_int(200) # milliseconds
 	timestamp=c_int(-5) # writing timestamp here
@@ -118,7 +197,7 @@ def phdirdata(): # seems to work, but not the timestamp
 	
 	phdvis=c_char_p ("PHD1K000:5".encode('utf-8'))
 	datareg=c_char_p ("Data".encode('utf-8'))
-	data=c_char_p("coolllllllllllllllllllllllllllll".encode('utf-8'))
+	data=c_char_p("-1".encode('utf-8'))
 	maxvallen=c_int(10) # max string length
 	timeout=c_int(200) # milliseconds
 	timestamp=c_int(-5) # writing timestamp here
@@ -135,7 +214,7 @@ def pmtdata(): # seems to work, but not the timestamp
 	
 	phdvis=c_char_p ("PMTC0000:1".encode('utf-8'))
 	datareg=c_char_p ("Data".encode('utf-8'))
-	data=c_char_p("coolllllllllllllllllllllllllllll".encode('utf-8'))
+	data=c_char_p("-1".encode('utf-8'))
 	maxvallen=c_int(10) # max string length
 	timeout=c_int(200) # milliseconds
 	timestamp=c_int(-5) # writing timestamp here
@@ -144,7 +223,9 @@ def pmtdata(): # seems to work, but not the timestamp
 	#print("PMT", end = ' ')
 	#print("I:",data.value.decode("ascii"), end = ' ')
 	#print("Ts",timestamp.value, end = ' ')
-	return data.value.decode("ascii"),timestamp.value 
+	return data.value.decode("ascii"),timestamp.value
+	
+	
 
 
 if __name__ == '__main__':
@@ -171,52 +252,106 @@ if __name__ == '__main__':
 	phdvisdataset=np.zeros(0)
 	phdirdataset=np.zeros(0)
 	pmtts=np.zeros(0)
-	phsvists=np.zeros(0)
+	phdvists=np.zeros(0)
 	phdirts=np.zeros(0)
 	
 	print("Cancel data acquisition with Strg-C / Ctrl-C")
 	
-	try:
-		while True:
-			#time.sleep(10./1000) #pause for x ms
-			# full speed is 3x realtime, not limited by printing
+	#timer =QtCore.QTimer()
+	#timer.timeout.connect(lambda: None)
+	#timer.start(100)
+	
+	
+	
+	i=0 # loop counter
+	n=1 # points plotted at once -> faster
+	times=np.zeros(0)
+	while time.perf_counter()%1>0.001:	# waiting for the begin of the next second
+		continue
 		
-			ints,ts=pmtdata()
-			#print("PMT", end = ' ')
-			#print("I:",ints, end = ' ')
-			#print("Ts",ts, end = ' ')
-			pmtdataset=np.append(pmtdataset,int(ints))
-			pmtts=np.append(pmtts,int(ts))
-			
-			ints,ts=phdvisdata() 
-			#print("phdvis", end = ' ')
-			#print("I:",ints, end = ' ')
-			#print("Ts",ts, end = ' ')
-			phdvisdataset=np.append(phdvisdataset,int(ints))
-			phsvists=np.append(phsvists,int(ts))
-			
-			ints,ts=phdirdata()
-			#print("phdIR", end = ' ')
-			#print("I:",ints, end = ' ')
-			#print("Ts",ts, end = ' ')
-			#print("")
-			phdirdataset=np.append(phdirdataset,int(ints))
-			phdirts=np.append(phdirts,int(ts))
-			
-	except (KeyboardInterrupt):
-		print ("Finished?")
-		laseroff()
-		pmtoff()
-		err(mydll.rcDisconnect())
-		print("Disconnecting!")
+	t0=time.perf_counter()
+	while True:
+		#time.sleep(10./1000) #pause for x ms
+		# full speed is 3x realtime, not limited by printing
+	
+		#ints,ts=pmtdata()
+		ints,ts=10*np.cos(i/10),time.perf_counter()*1000
+		#print("PMT", end = ' ')
+		#print("I:",ints, end = ' ')
+		#print("Ts",ts, end = ' ')
+		pmtdataset=np.append(pmtdataset,int(ints))
+		pmtts=np.append(pmtts,int(ts))
 		
-		print (pmtdataset)
-		print(phdvisdataset)
-		print (phdirdataset)
+		#ints,ts=phdvisdata() 
+		#print("phdvis", end = ' ')
+		#print("I:",ints, end = ' ')
+		#print("Ts",ts, end = ' ')
+		phdvisdataset=np.append(phdvisdataset,int(ints))
+		phdvists=np.append(phdvists,int(ts))
+		
+		#ints,ts=phdirdata()
+		#print("phdIR", end = ' ')
+		#print("I:",ints, end = ' ')
+		#print("Ts",ts, end = ' ')
+		#print("")
+		phdirdataset=np.append(phdirdataset,int(ints))
+		phdirts=np.append(phdirts,int(ts))
+		if i%n==0: # drawing plot
+			pass
+			#update(pmtdataset[-n:])
+			#print(pmtdataset[-n:])
+			#update2(phdvisdataset[-n:])
+			
+			#or
+			maxpmt=int(np.amax(pmtdataset))
+			maxphdvis=int(np.amax(phdvisdataset))
+			cmdlineplot2x(np.mean(pmtdataset[-n:]),maxpmt,np.mean(phdvisdataset[-n:]),maxphdvis,columns)
+			
+			
+		
+		
+		print(i/(time.perf_counter()-t0),"Hz",end="\r")
+
+		
+		
+		if win.isHidden()==True: # break the loop by closing the window
+			break
+		i+=1
+
+
+
+
+
+	
+	print ("Finished?")
+	laseroff()
+	pmtoff()
+	err(mydll.rcDisconnect())
+	print("Disconnecting!")
+	
+	
+	## making all datasets of equal length
+	#if min(pmtdataset.size,phdirts.size)!=max(pmtdataset.size,phdirts.size):
+		#minn=min(pmtdataset.size,phdirts.size)
+		#pmtdataset=pmtdataset[:minn]
+		#phdvisdataset=phdvisdataset[:minn]
+		#phdirdataset=phdirdataset[:minn]
+		
+		#pmtts=pmtts[:minn]
+		#phdvists=phdvists[:minn]
+		#phdirts=phdirts[:minn]
+		
+		
+		
+
+	
+	print (pmtdataset)
+	print(phdvisdataset)
+	print (phdirdataset)
 		
 	
 	for i in range (0,pmtdataset.size): # sanity check
-		if pmtts[i]==phsvists[i]==phsirts[i]:
+		if pmtts[i]==phdvists[i]==phdirts[i]:
 			continue
 		else:
 			print ("different timestamps!",i)
@@ -224,10 +359,10 @@ if __name__ == '__main__':
 	
 	doubles=[]
 			
-			
+	print ("Test")
 	
 	for i in range (1,pmtdataset.size): # check for double entries from oversampling
-		if pmtts[i-1]==phsvists[i]:
+		if pmtts[i-1]==phdvists[i]:
 			doubles.append(i)
 		else:
 			continue
@@ -235,8 +370,8 @@ if __name__ == '__main__':
 	pmtdataset=np.delete(pmtdataset,doubles) # deleting those
 	phdvisdataset=np.delete(phdvisdataset,doubles)
 	phdirdataset=np.delete(phdirdataset,doubles)
-	pmtts=np.np.delete(pmtts,doubles)
-	phsvists=np.delete(phsvists,doubles)
+	pmtts=np.delete(pmtts,doubles)
+	phdvists=np.delete(phdvists,doubles)
 	phdirts=np.delete(phdirts,doubles)
 	
 	# writing to parent directory
@@ -245,9 +380,14 @@ if __name__ == '__main__':
 	# plotting/ file writing
 	
 			
-			
+	print ("Test2")
+	exit()
+	### END QtApp ####
+	pg.QtGui.QApplication.exec_() # you MUST put this at the end
+	##################	
 	
 	input("...Press enter to EXIT...")
+
 
 
 		
