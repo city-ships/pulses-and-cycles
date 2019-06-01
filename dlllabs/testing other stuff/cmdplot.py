@@ -6,8 +6,8 @@ import os
 import sys
 import time
 
-from numba import jit
-#os.system('mode con: cols=230 lines=40')
+
+os.system('mode con: cols=230 lines=40')
 
 time.sleep(2)
 

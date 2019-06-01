@@ -51,11 +51,11 @@ def update2(value):
 	ptr2 += size                              # update x position for displaying the curve
 	curve2.setData(Xm2)                     # set the curve with this data
 	curve2.setPos(ptr2,0)                   # set x position in the graph to 0
-	#QtGui.QApplication.processEvents()    # you MUST process the plot now
+	QtGui.QApplication.processEvents()    # you MUST process the plot now
 
-timer = pg.QtCore.QTimer()
-timer.timeout.connect(update)
-timer.start(50)
+#timer = pg.QtCore.QTimer()
+#timer.timeout.connect(update)
+#timer.start(50)
 
 ### MAIN PROGRAM #####
 # this is a brutal infinite loop calling your realtime data plot

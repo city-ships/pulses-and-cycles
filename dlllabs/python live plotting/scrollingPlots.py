@@ -42,7 +42,7 @@ tlast=0
 def update():
 	update1()
 	global tlast
-	#print (1/(time.perf_counter()-tlast))
+	print (1/(time.perf_counter()-tlast))
 	tlast=time.perf_counter()
 
 timer = pg.QtCore.QTimer()
@@ -57,5 +57,4 @@ if __name__ == '__main__':
 	if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
 		QtGui.QApplication.instance().exec_()
 		
-	for i in range (0,500):
-		print(i)
+

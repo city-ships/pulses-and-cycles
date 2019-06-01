@@ -19,7 +19,7 @@ app = QtGui.QApplication([])            # you MUST do this once (initialize thin
 
 
 win = pg.GraphicsWindow(title="Signal from potomultiplier and photodiode") # creates a window
-win.showMaximized()
+#win.showMaximized() # maximised is slower for plotting
 
 
 p = win.addPlot(title="Photomuliplier")  # creates empty space for the plot in the window
@@ -90,6 +90,10 @@ def err(num):
 # plotting in the terminal (plots are sideways)
 
 def cmdlineplot2x(value1,maxx1,value2,maxx2,columns):
+	if maxx1==0:
+		maxx1=1
+	if maxx2==0:
+		maxx2=1
 
 	columns-=1
 	columns=int(columns/2)
@@ -106,9 +110,9 @@ def cmdlineplot2x(value1,maxx1,value2,maxx2,columns):
 
 
 try:
-    columns, rows = os.get_terminal_size(0)
+	columns, rows = os.get_terminal_size(0)
 except OSError:
-    columns, rows = os.get_terminal_size(1)
+	columns, rows = os.get_terminal_size(1)
 
 
 #laser --------------------
@@ -242,7 +246,7 @@ if __name__ == '__main__':
 	
 	# set amplification percentage
 	
-	setamp(70)
+	setamp(23)
 	
 
 
@@ -257,60 +261,132 @@ if __name__ == '__main__':
 	
 	print("Cancel data acquisition with Strg-C / Ctrl-C")
 	
-	#timer =QtCore.QTimer()
-	#timer.timeout.connect(lambda: None)
-	#timer.start(100)
+
 	
-	
+
 	
 	i=0 # loop counter
-	n=1 # points plotted at once -> faster
+	n=2 # points plotted at once -> faster 2 or more to get up to 50 Hz for the main loop
+	
+	srate=50 # sampling rate Hz 
+
+	
+
+
+	dt= 1/srate
+	
+	test=np.ones(5)
+	
+	#update(test)
+
+	#update2(test)	
 	times=np.zeros(0)
-	while time.perf_counter()%1>0.001:	# waiting for the begin of the next second
-		continue
+
+	time.sleep(7) # wait for laser/flashlamps to switch on
+	#while time.perf_counter()%1>0.001:	# waiting for the begin of the next second
+	#	continue	
+	
+	delta=0.0*dt # seconds
+
+	# stampstart=time.perf_counter()
+	# i=0	
+	# print ("query start")
+	# for kk in range(0,1000):
+		# ii1,ts1=pmtdata()
+		# stamp00=time.perf_counter()
+		# ii2,ts2=pmtdata()
+	
+		# if ts1!=ts2:
+			# #print ("ts changed",ts2-ts1)
+			# #laseroff()
+			# #exit()
+			# #print(1000*(stamp00-stampold))
+			# stampold=stamp00
+			# #print(i/(time.perf_counter()-stampstart),end="\r")
+			# i+=1
+		# #if ii1!=ii2:
+			# #print ("ts changed",ts2-ts1)
+			# #laseroff()
+			# #exit()
+			# #print(1000*(stamp00-stampold))
+			# #stampold=stamp00
+			# #print(i/(time.perf_counter()-stampstart),end="\r")
+			# #i+=1
+			
+			# #break
+			
+
+	
+
+	
+	# print(i/(time.perf_counter()-stampstart),end="\r")
+	# exit()
 		
+ 
+
+
+	
+#	while (time.perf_counter()-stamp00)<=delta:
+#		continue#
+
 	t0=time.perf_counter()
-	while True:
+	#while True:
+	for xx in range (0,50*10):
+		
+		
+		while ((time.perf_counter()-t0+delta)*srate<=i):
+		#while time.perf_counter()%(0.02)>0.001:
+			#num+=1
+			continue
+		print (((time.perf_counter()-t0)*1000)%20)
+		
 		#time.sleep(10./1000) #pause for x ms
 		# full speed is 3x realtime, not limited by printing
 	
-		#ints,ts=pmtdata()
-		ints,ts=10*np.cos(i/10),time.perf_counter()*1000
+		ints,ts=pmtdata()
+		#ints,ts=10*np.cos(i/10),time.perf_counter()*1000
 		#print("PMT", end = ' ')
 		#print("I:",ints, end = ' ')
 		#print("Ts",ts, end = ' ')
-		pmtdataset=np.append(pmtdataset,int(ints))
-		pmtts=np.append(pmtts,int(ts))
 		
-		#ints,ts=phdvisdata() 
+		ints2,ts2=phdvisdata() 
 		#print("phdvis", end = ' ')
 		#print("I:",ints, end = ' ')
 		#print("Ts",ts, end = ' ')
-		phdvisdataset=np.append(phdvisdataset,int(ints))
-		phdvists=np.append(phdvists,int(ts))
 		
-		#ints,ts=phdirdata()
+
+		ints3,ts3=phdirdata()
 		#print("phdIR", end = ' ')
 		#print("I:",ints, end = ' ')
 		#print("Ts",ts, end = ' ')
 		#print("")
-		phdirdataset=np.append(phdirdataset,int(ints))
-		phdirts=np.append(phdirts,int(ts))
+
+		
+		pmtdataset=np.append(pmtdataset,int(ints))
+		pmtts=np.append(pmtts,int(ts))
+		
+
+		phdvisdataset=np.append(phdvisdataset,int(ints2))
+		phdvists=np.append(phdvists,int(ts2))
+		
+
+		phdirdataset=np.append(phdirdataset,int(ints3))
+		phdirts=np.append(phdirts,int(ts3))
 		if i%n==0: # drawing plot
-			pass
-			#update(pmtdataset[-n:])
+			
+			update(pmtdataset[-n:])
 			#print(pmtdataset[-n:])
-			#update2(phdvisdataset[-n:])
+			update2(phdvisdataset[-n:])
 			
 			#or
-			maxpmt=int(np.amax(pmtdataset))
-			maxphdvis=int(np.amax(phdvisdataset))
-			cmdlineplot2x(np.mean(pmtdataset[-n:]),maxpmt,np.mean(phdvisdataset[-n:]),maxphdvis,columns)
+			#maxpmt=int(np.amax(pmtdataset))
+			#maxphdvis=int(np.amax(phdvisdataset))
+			#cmdlineplot2x(np.mean(pmtdataset[-n:]),maxpmt,np.mean(phdvisdataset[-n:]),maxphdvis,columns)
 			
 			
 		
 		
-		print(i/(time.perf_counter()-t0),"Hz",end="\r")
+		print(i/(time.perf_counter()-t0+delta),"Hz",end="\r")
 
 		
 		
@@ -345,6 +421,10 @@ if __name__ == '__main__':
 		
 
 	
+	#print (pmtdataset)
+	#print(phdvisdataset)
+	#print (phdirdataset)
+	
 	print (pmtdataset)
 	print(phdvisdataset)
 	print (phdirdataset)
@@ -361,6 +441,8 @@ if __name__ == '__main__':
 			
 	print ("Test")
 	
+	# shit, timestamps can stay the same with different data ... 
+	
 	for i in range (1,pmtdataset.size): # check for double entries from oversampling
 		if pmtts[i-1]==phdvists[i]:
 			doubles.append(i)
@@ -375,7 +457,8 @@ if __name__ == '__main__':
 	phdirts=np.delete(phdirts,doubles)
 	
 	# writing to parent directory
-	np.savetxt("../data.csv", np.transpose((pmtdataset,phdvisdataset,phdirdataset)), fmt='%.18e', delimiter='	', newline='\n', header='', footer='', comments='# ')
+	datasave=np.transpose((pmtdataset,phdvisdataset,phdirdataset,pmtts,phdvists,phdirts))
+	np.savetxt("../data.csv", datasave.astype(int), fmt='%i', delimiter='	', newline='\n', header='', footer='', comments='# ')
 	
 	# plotting/ file writing
 	
