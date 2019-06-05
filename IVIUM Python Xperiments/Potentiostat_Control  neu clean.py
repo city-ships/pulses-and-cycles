@@ -3,12 +3,13 @@
 import numpy as np
 import time
 from ctypes import*
-from numba import jit
+#from numba import jit
 # programming safety precautions
 
 
 
 # specs are in the manual on page 295 
+# in the file I got they use 10 Hz for data sampling of the potentiostat
 
 maxcurrent=float(0.027) # amps +/-30 mV max
 
@@ -22,14 +23,14 @@ def savecurrent(amps):
 maxpotential=float(3.6) # +/-4 V max # normal operation
 
 # extendet range  up to 7.5V
-@jit(cache=True)
+#@jit(cache=True)
 def savepotential(volts):
 	if np.absolute(volts)>maxpotential:
 		print("error: potential out of bounds!")
 		return maxpotential*np.sign(volts)
 	else:
 		return volts
-@jit(cache=True)
+#@jit(cache=True)
 def trivolt(u1,u2,p,t0,tt):
 	u1=savepotential(u1)
 	u2=savepotential(u2)
@@ -55,6 +56,7 @@ def err(ret):
 
 
 
+	
 
 
 	
@@ -80,75 +82,117 @@ if __name__ == "__main__":
 	
 	while time.perf_counter()%1>0.001: # wait for full second
 		continue
+	try:	
+	
+		# import  dll
+		mydll = WinDLL("IVIUM_remdriver.dll")
+		
+		
+		
 		
 	
-	# import  dll
-	mydll = WinDLL("IVIUM_remdriver.dll")
-	
-	
-	
-	
+		stat=c_int(-5555) # return variable
+		one=c_int(1)
+		zero=c_int(0)
 
-	stat=c_int(-5555) # return variable
-	one=c_int(1)
-	zero=c_int(0)
+		
+		
+		print ("Open Remdriver") # works even without driver?
+		err(mydll.IV_open())
+	
+		
+		stat=mydll.IV_version()
+		print("version number of the IVIUM_remdriver.dll the active IviumSoft needs",stat)
+		
 	
 	
-	print ("Open Remdriver")
-	err(mydll.IV_open())
+		
+		#err(mydll.IV_abort()) # little weird error
+		#print("Cancelling Method")	
+		
+	
+		
+	
+	
+	
+		print ("Trying to connect:")	
+		err(mydll.IV_connect (byref(one)) ) #Connect to selected device, int=1 for connect, int=0 for disconnect
 
-	
-	stat=mydll.IV_version()
-	print("version number of the IVIUM_remdriver.dll the active IviumSoft needs",stat)
-	
-	serialn=c_char_p("-1".encode('utf-8'))
-	
-	print ("Serial Number: requesting ... ")	# if this works, the Compactstat.h is connected!
-	err(mydll.IV_readSN ( serialn))
-	print("Serial Number:",serialn.value.decode("ascii"), "<- number should be here")
-
-	
-	#err(mydll.IV_abort()) # little weird error
-	#print("Cancelling Method")	
-	
-
-	
-
-
-
-	print ("Trying to connect:")	
-	err(mydll.IV_connect (byref(one)) ) #Connect to selected device, int=1 for connect, int=0 for disconnect
-	
-	#Select configuration, 0=off; 1=EStat4EL(default),
-	#2=EStat2EL, 3=EstatDummy1, 4=EStatDummy2,
-	#5=EstatDummy3, 6=EstatDummy4, 7=Istat4EL,
-	#8=Istat2EL, 9=IstatDummy, 10=BiStat4EL, 11=BiStat2EL
-	conn=c_int(0)
-	print("Setting Connectionmode to",conn.value)
-	err(mydll.IV_setconnectionmode (byref(conn)))
-	
-	
-	print("Reading Potential")
-	V=c_double(-333)
-	err(mydll.IV_getpotential (byref(V)))
-	print (V.value,"Volts")
-	
-	print("Reading Current")
-	I=c_double(-666)
-	err(mydll.IV_getcurrent (byref(I)))
-	print (I.value,"Amps")	
-	
-	zeit=trivolt(u1,u2,period,0.,time.perf_counter()) # call to get things compiled into the cache
-	t0=time.perf_counter()
-	for sd in range (0,1000):
-	#	if sd==1:
-	#		t0=time.perf_counter()
+		#Select configuration, 0=off; 1=EStat4EL(default),
+		#2=EStat2EL, 3=EstatDummy1, 4=EStatDummy2,
+		#5=EstatDummy3, 6=EstatDummy4, 7=Istat4EL,
+		#8=Istat2EL, 9=IstatDummy, 10=BiStat4EL, 11=BiStat2EL
+		
+		# dummies:
+		
+		# do not work with usb power only
+		
+		#3 dummy 1: 1 kOhm resistor
+		#4 dummy 2: 100 kOhm resistor
+		#5 dummy 3: 10 MOhm resistor
+		#6 dummy 4: 100 ohm resistor, in series with 1 kOhm resistor 
+		#parallel over 1 uF capacitor (250 ohm resistor, in series with 
+		#1 kOhm resistor parallel over 1 uF capacitor for IviumStat)
+		
+		
+		conn=c_int(3)
+		print("Setting Connectionmode to",conn.value)
+		err(mydll.IV_setconnectionmode (byref(conn)))
+		
+		#serialn=c_char_p("woieruowieruwoeiru".encode('utf-8'))
+		# kills the program
+		#print ("Serial Number: requesting ... ")	# if this works, the Compactstat.h is connected!
+		#err(mydll.IV_readSN ( byref(serialn)))
+		#print("Serial Number:",serialn.value.decode("ascii"), "<- number should be here")
+		
+		
+		#Set current range, 0=10A, 1=1A, etc,
+		crange=c_int(4)
+		print("setting current range")
+		err(mydll.IV_setcurrentrange (byref(crange)))
+		
+		print("set Potential to 0V")
+		novolt=c_double(-0.5)
+		
+		err(mydll.IV_setpotential (byref(novolt)))
+		
+		time.sleep(1)		
 			
-		zeit=trivolt(u1,u2,period,t0,time.perf_counter())
-	print(time.perf_counter()-t0,"seconds")
-	
+		print("Reading Potential")
+		V=c_double(-333)
+		err(mydll.IV_getpotential (byref(V)))
+		print (V.value,"Volts")
+		
+		print("Reading Current")
+		I=c_double(-666)
+		err(mydll.IV_getcurrent (byref(I)))
+		print (I.value,"Amps")
+		
+		
+		
+		
+		# zeit=trivolt(u1,u2,period,0.,time.perf_counter()) # call to get things compiled into the cache
+		# t0=time.perf_counter()
+		# for sd in range (0,1000):
+		# #	if sd==1:
+		# #		t0=time.perf_counter()
+				
+			# zeit=trivolt(u1,u2,period,t0,time.perf_counter())
+		# print(time.perf_counter()-t0,"seconds")
+	except:
+		pass
+		print ("Error Now closing connection")
+		connoff=c_int(0)
+		print("Setting Connectionmode to",connoff.value)
+		err(mydll.IV_setconnectionmode (byref(connoff)))
+		
+		print ("Closing Device connection")
+		connoff=c_int(0)
+		print("Setting Connectionmode to",connoff.value)
+		err(mydll.IV_setconnectionmode (byref(connoff)))
 
-	print ("Closing Connection")	
+
+	print ("Closing driver Connection")	
 	err(mydll.IV_connect (byref(zero)) )
 
 	
